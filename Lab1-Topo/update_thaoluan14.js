@@ -1,3 +1,0 @@
-const fs = require('fs');
-const content = '\n## SỬA LỖI KHỞI TẠO DASHBOARD ("addEventListener" null)\n- Lỗi xảy ra do trong file `sketchEvents.js` vẫn còn sót lại một đoạn mã cũ cố gắng gắn sự kiện (event listener) cho nút "Xuất mã SQL" (`btnExportSQL`), nhưng nút này đã bị đổi tên thành `btnSaveDB` trên giao diện HTML ở các bước cập nhật trước.\n- Đã tiến hành xóa bỏ đoạn mã dư thừa này khỏi `sketchEvents.js` vì chức năng lưu trực tiếp CSDL hiện tại đã được giao toàn quyền quản lý cho `uiEvents.js`.\n- Phiên bản cache mới `v=13` đã được kích hoạt. Lỗi màn hình trắng/khởi tạo đã được khắc phục hoàn toàn.\n';
-fs.appendFileSync('thaoluan.md', content);

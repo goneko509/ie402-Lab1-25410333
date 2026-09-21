@@ -1,3 +1,0 @@
-const fs = require('fs');
-const content = '\n## NGUYÊN NHÂN CỐT LÕI (ROOT CAUSE) ĐƯỢC PHÁT HIỆN\n- **Trình nạp AMD (Dojo Loader)** của ArcGIS 4.26 kiểm tra cực kỳ khắt khe kiểu dữ liệu của hàm callback (`typeof === "function"` không đủ, mà nó kiểm tra `Object.prototype.toString`). \n- Do tôi đã dùng `async function(...)` thay vì `function(...)` thuần túy, Dojo Loader nhận diện đây là một `[object AsyncFunction]` chứ không phải `[object Function]`, dẫn đến việc nó **im lặng từ chối thực thi** toàn bộ khối code bên trong mà không báo bất kỳ lỗi nào ra Console!\n- **Khắc phục**: Đã chuyển callback về hàm `function(...)` thông thường và gói phần logic bất đồng bộ vào bên trong bằng một hàm tự thực thi (IIFE).\n';
-fs.appendFileSync('thaoluan.md', content);

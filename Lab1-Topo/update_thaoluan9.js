@@ -1,3 +1,0 @@
-const fs = require('fs');
-const content = '\n## KHẮC PHỤC LỖI KHÔNG CẬP NHẬT GIAO DIỆN CÁC TAB KHI CHỈNH SỬA\n- Đã viết lại cơ chế đồng bộ DOM của bảng dữ liệu bên trái (`uiManager.js` -> `updateRowInTable`).\n- Giờ đây, khi bạn cập nhật vị trí (kéo thả Point/Node) hoặc nhấp đúp để đổi tên/thuộc tính, dòng dữ liệu tương ứng trong bảng (kể cả tọa độ thập phân) sẽ **lập tức thay đổi theo thời gian thực** mà không làm hỏng định dạng HTML (mất chữ IDP hay nút Kính lúp) như trước đây.\n- Bạn hãy F5 tải lại trang (mã version 9) và thử kéo 1 Node hoặc sửa tên 1 đường Line, sau đó nhìn sang bảng bên trái xem có "nhảy" số/chữ theo liền không nhé!\n';
-fs.appendFileSync('thaoluan.md', content);

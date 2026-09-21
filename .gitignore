@@ -1,7 +1,19 @@
-/*
-!/db/
-!/Lab1-Topo/
-!/.gitignore
+# Bỏ qua tất cả
+*
 
-/Lab1-Topo/node_modules/
-/Lab1-Topo/.env
+# Cho phép Git quét các thư mục
+!*/
+
+# Các file CSDL được cho phép
+!db/dbconfig.json
+!db/topo_db.sql
+!db/topo_db_creator.sql
+
+# Các file mã nguồn được cho phép
+!Lab1-Topo/server.js
+!Lab1-Topo/index.html
+!Lab1-Topo/package.json
+!Lab1-Topo/README.md
+
+# Cho phép file .gitignore
+!.gitignore

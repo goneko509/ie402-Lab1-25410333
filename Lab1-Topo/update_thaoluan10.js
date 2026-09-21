@@ -1,3 +1,0 @@
-const fs = require('fs');
-const content = '\n## PHÂN CHIA MODULE TÔ-PÔ TỰ ĐỘNG\n- Đã tách file `spatialAutoTopo.js` thành 2 file module riêng biệt để dễ dàng quản lý và bảo trì mã nguồn:\n  1. `spatialRebuildArc.js`: Chứa chức năng "Xây dựng lại ARC" (tìm giao điểm, bẻ gãy cung, dò Đa giác và sinh kịch bản tái cấu trúc mạng lưới Tô-pô).\n  2. `spatialDetectPoly.js`: Chứa chức năng "Tạo polygon mới" (quét vùng chọn bằng Rectangle để dò tìm chu trình khép kín và đề xuất tạo Đa giác mới lẻ tẻ).\n- Đã cập nhật file điều phối chính `admin.js` để nạp 2 module này thay cho file cũ.\n- Đã cấu hình mã phiên bản mới (`v=10`) để trình duyệt tự động xóa bộ nhớ đệm và tải mã JavaScript mới nhất.\n';
-fs.appendFileSync('thaoluan.md', content);
