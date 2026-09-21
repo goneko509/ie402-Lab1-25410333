@@ -1,0 +1,7 @@
+/*
+!/db/
+!/Lab1-Topo/
+!/.gitignore
+
+/Lab1-Topo/node_modules/
+/Lab1-Topo/.env

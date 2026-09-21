@@ -1,0 +1,26 @@
+{
+  "Database": {
+    "Provider": "Microsoft SQL Server",
+    "Server": "localhost",
+    "Port": 1433,
+    "DatabaseName": "25410333_GISDB",
+    "Authentication": {
+      "Type": "SqlPassword",
+      "UserId": "sa",
+      "Password": "123",
+      "TrustedConnection": false
+    },
+    "Options": {
+      "Encrypt": false,
+      "TrustServerCertificate": true,
+      "ConnectionTimeout": 30
+    },
+    "ConnectionStrings": {
+      "DefaultConnection": "Server=localhost,1433;Database=25410333_GISDB;User Id=sa;Password=123;TrustServerCertificate=True;",
+      "WindowsAuthConnection": "Server=localhost;Database=25410333_GISDB;Trusted_Connection=True;TrustServerCertificate=True;",
+      "ADO_NET": "Server=localhost,1433;Initial Catalog=25410333_GISDB;User ID=sa;Password=123;TrustServerCertificate=True;",
+      "Python_PyODBC": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=localhost,1433;DATABASE=25410333_GISDB;UID=sa;PWD=123",
+      "Node_Sequelize": "mssql://sa:123@localhost:1433/25410333_GISDB"
+    }
+  }
+}

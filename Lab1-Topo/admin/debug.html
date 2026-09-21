@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head><title>Debug</title></head>
+<body>
+<pre id="out"></pre>
+<script>
+const out = document.getElementById('out');
+function log(...args) {
+    out.textContent += args.join(' ') + '\n';
+    console.log(...args);
+}
+
+// Test dynamic import of ES modules (same as admin.js uses)
+(async () => {
+    try {
+        log('Testing ES module imports...');
+        const state = await import('./modules/state.js');
+        log('✅ state.js OK - AppState:', JSON.stringify(Object.keys(state.AppState)));
+    } catch(e) {
+        log('❌ state.js FAILED:', e.message);
+    }
+
+    try {
+        const cfg = await import('./modules/config.js');
+        log('✅ config.js OK - API_BASE:', cfg.API_BASE);
+    } catch(e) {
+        log('❌ config.js FAILED:', e.message);
+    }
+
+    try {
+        const sg = await import('./modules/sqlGenerator.js');
+        log('✅ sqlGenerator.js OK - exports:', Object.keys(sg).join(', '));
+    } catch(e) {
+        log('❌ sqlGenerator.js FAILED:', e.message);
+    }
+
+    try {
+        const ui = await import('./modules/uiManager.js');
+        log('✅ uiManager.js OK - exports:', Object.keys(ui).join(', '));
+    } catch(e) {
+        log('❌ uiManager.js FAILED:', e.message);
+    }
+
+    try {
+        const ah = await import('./modules/apiHandler.js');
+        log('✅ apiHandler.js OK - exports:', Object.keys(ah).join(', '));
+    } catch(e) {
+        log('❌ apiHandler.js FAILED:', e.message);
+    }
+
+    try {
+        const sk = await import('./modules/sketchEvents.js');
+        log('✅ sketchEvents.js OK - exports:', Object.keys(sk).join(', '));
+    } catch(e) {
+        log('❌ sketchEvents.js FAILED:', e.message);
+    }
+
+    try {
+        const ue = await import('./modules/uiEvents.js');
+        log('✅ uiEvents.js OK - exports:', Object.keys(ue).join(', '));
+    } catch(e) {
+        log('❌ uiEvents.js FAILED:', e.message);
+    }
+
+    try {
+        const at = await import('./modules/spatialAutoTopo.js');
+        log('✅ spatialAutoTopo.js OK - exports:', Object.keys(at).join(', '));
+    } catch(e) {
+        log('❌ spatialAutoTopo.js FAILED:', e.message);
+    }
+
+    try {
+        const sd = await import('./modules/spatialDelete.js');
+        log('✅ spatialDelete.js OK - exports:', Object.keys(sd).join(', '));
+    } catch(e) {
+        log('❌ spatialDelete.js FAILED:', e.message);
+    }
+
+    log('--- Done ---');
+})();
+</script>
+</body>
+</html>

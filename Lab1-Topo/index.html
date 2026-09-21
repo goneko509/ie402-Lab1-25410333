@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ArcGIS 2D Entities from Database</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css">
+  
+  <style>
+    html, body {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    #viewDiv {
+      height: 100%;
+      width: 100%;
+    }
+    .sidebar {
+      height: 100%;
+      overflow-y: auto;
+      border-right: 1px solid #dee2e6;
+      background-color: #f8f9fa;
+    }
+    .tab-content {
+      font-size: 0.9rem;
+    }
+    .table {
+      font-size: 0.85rem;
+    }
+    .nav-tabs .nav-link {
+        font-size: 0.85rem;
+        padding: 0.5rem;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://js.arcgis.com/4.26/"></script>
+  
+  <script>
+    require([
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/Graphic",
+      "esri/layers/GraphicsLayer"
+    ], function(Map, MapView, Graphic, GraphicsLayer) {
+
+        var map = new Map({
+            basemap: "topo-vector"
+        });
+
+        var view = new MapView({
+            container: "viewDiv",
+            map: map,
+            highlightOptions: {
+                color: "blue"
+            },
+            popup: {
+                dockEnabled: true,
+                dockOptions: {
+                    buttonEnabled: true,
+                    breakpoint: false,
+                    position: "top-right"
+                }
+            }
+        });
+
+        var graphicsLayer = new GraphicsLayer();
+        map.add(graphicsLayer);
+
+        // Lắng nghe sự kiện click trên bản đồ để đối chiếu ngược về tab/row
+        view.on("click", function(event) {
+            view.hitTest(event).then(function(response) {
+                if (response.results.length > 0) {
+                    const graphicResult = response.results.find(function(result) {
+                        return result.graphic.layer === graphicsLayer;
+                    });
+                    
+                    if (graphicResult) {
+                        const graphic = graphicResult.graphic;
+                        if (graphic && graphic.attributes && graphic.attributes.gidx !== undefined) {
+                            const gidx = graphic.attributes.gidx;
+                            const row = document.querySelector(`.row-graphic[data-gidx="${gidx}"]`);
+                            
+                            if (row) {
+                                // Xác định tab chứa row này
+                                const tabPane = row.closest('.tab-pane');
+                                if (tabPane) {
+                                    const tabId = tabPane.id;
+                                    const tabBtn = document.querySelector(`[data-bs-target="#${tabId}"]`);
+                                    if (tabBtn) {
+                                        const bsTab = bootstrap.Tab.getOrCreateInstance(tabBtn);
+                                        bsTab.show();
+                                    }
+                                }
+                                
+                                // Đợi tab animation xong rồi scroll & mở collapse
+                                setTimeout(() => {
+                                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    
+                                    // Highlight row tạm thời
+                                    row.style.transition = "background-color 0.5s";
+                                    row.style.backgroundColor = "#fffa90";
+                                    setTimeout(() => row.style.backgroundColor = "", 2000);
+                                    
+                                    // Mở collapse nếu chưa mở
+                                    const targetId = row.getAttribute('data-bs-target');
+                                    if (targetId) {
+                                        const collapseEl = document.querySelector(targetId);
+                                        if (collapseEl && !collapseEl.classList.contains('show')) {
+                                            const bsCollapse = bootstrap.Collapse.getOrCreateInstance(collapseEl);
+                                            bsCollapse.show();
+                                        }
+                                    }
+                                }, 200);
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        function zoomToGraphics(graphicsArray) {
+            const validGraphics = graphicsArray.filter(g => g.geometry);
+            if (validGraphics.length === 0) return;
+
+            view.when(function() {
+                view.goTo(validGraphics, {
+                    duration: 1000,
+                    maxZoom: 18
+                }).catch(function(err) {
+                    if (err.name !== "AbortError") console.error("Lỗi khi zoom:", err);
+                });
+            });
+        }
+
+        // Hàm hỗ trợ tạo đối tượng Graphic
+        var createGraphic = function (data) {
+            let symbol;
+            
+            if (data.type === "point") {
+                if (data.isIsolated) {
+                    symbol = {
+                        type: "simple-marker", style: "circle",
+                        color: [255, 0, 0],
+                        size: "15px",
+                        outline: { color: [255, 255, 255], width: 1 }
+                    };
+                } else {
+                    symbol = {
+                        type: "simple-marker",
+                        color: [0, 153, 51],
+                        size: "12px",
+                        outline: { color: [255, 255, 255], width: 1 }
+                    };
+                }
+            } else if (data.type === "polyline") {
+                symbol = {
+                    type: "simple-line",
+                    color: [226, 119, 40],
+                    width: 2.5
+                };
+            } else if (data.type === "polygon") {
+                const r = Math.floor(Math.random() * 256);
+                const g = Math.floor(Math.random() * 256);
+                const b = Math.floor(Math.random() * 256);
+
+                if (data.isRegion) {
+                    symbol = {
+                        type: "simple-fill",
+                        style: "backward-diagonal",
+                        color: [r, g, b, 0.8],
+                        outline: { color: [0, 0, 0], width: 1.5 }
+                    };
+                } else {
+                    symbol = {
+                        type: "simple-fill",
+                        color: [r, g, b, 0.4],
+                        outline: { color: [255, 255, 255], width: 1 }
+                    };
+                }
+            }
+
+            return new Graphic({
+                geometry: data,
+                symbol: symbol,
+                attributes: data,
+                popupTemplate: {
+                    title: "{Name}",
+                    content: "Vị trí/Thông tin: <b>{Location}</b>."
+                }
+            });
+        }; 
+
+        let lastDataStr = "";
+        let isFirstLoad = true;
+
+        function loadData() {
+            fetch('http://localhost:3001/api/topo')
+                .then(response => response.json())
+                .then(jsondata => {
+                    const currentDataStr = JSON.stringify(jsondata);
+                    if (currentDataStr === lastDataStr) {
+                        return;
+                    }
+                    lastDataStr = currentDataStr;
+
+                    const newGraphics = [];
+                    
+                    let countPts = 0, countNodes = 0, countArcs = 0, countPolys = 0, countRegions = 0;
+                    let htmlPts = '', htmlNodes = '', htmlArcs = '', htmlPolys = '', htmlRegions = '';
+                    let gIndex = 0;
+
+                    // Tạo map tra cứu Name
+                    const nodeNameMap = {};
+                    if (jsondata.nodes) jsondata.nodes.forEach(n => nodeNameMap[n.IDN] = n.Name);
+                    const polyNameMap = {};
+                    if (jsondata.polygons) jsondata.polygons.forEach(p => polyNameMap[p.IDPO] = p.Name);
+
+                    if (jsondata.raw_points) {
+                        jsondata.raw_points.forEach(function(p){
+                            // Kiểm tra điểm cô lập bằng cách đối chiếu với tập IDP của Node và ArcPoint
+                            const isIsolated = (p.IS_ISOLATED !== undefined) ? p.IS_ISOLATED : 
+                                (!jsondata.nodePointIds.includes(p.IDP) && !jsondata.arcPointIds.includes(p.IDP));
+                                
+                            if (isIsolated) {
+                                countPts++;
+                                const pName = (p.NAME && p.NAME.trim() !== '') ? p.NAME : 'Điểm cô lập';
+                                htmlPts += `<tr class="row-graphic" data-gidx="${gIndex}" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#collapse-${gIndex}"><td>${p.IDP}</td><td>${pName}</td></tr>`;
+                                htmlPts += `<tr><td colspan="2" class="p-0 border-0"><div class="collapse" id="collapse-${gIndex}" data-bs-parent="#tbody-pts"><div class="card card-body p-2 m-1 bg-light text-start" style="font-size:0.8rem">
+                                    <div class="mb-1 text-primary"><strong>📍 Tọa độ:</strong> [${p.LONG.toFixed(6)}, ${p.LAT.toFixed(6)}]</div>
+                                </div></div></td></tr>`;
+                                
+                                newGraphics.push(createGraphic({
+                                    type: 'point', longitude: p.LONG, latitude: p.LAT,
+                                    Name: pName,
+                                    Location: 'ID: ' + p.IDP,
+                                    isIsolated: true,
+                                    gidx: gIndex
+                                }));
+                                gIndex++;
+                            }
+                        });
+                    }
+
+                    if (jsondata.nodes) {
+                        jsondata.nodes.forEach(function(n){
+                            countNodes++;
+                            
+                            const connectedArcs = jsondata.arcs ? jsondata.arcs.filter(a => a.FromNode === n.IDN || a.ToNode === n.IDN) : [];
+                            // Thay vì in IDA, chỉ lấy Name của Cung theo quy định
+                            const arcsStr = connectedArcs.length > 0 ? connectedArcs.map(a => a.Name || `Arc_${a.IDA}`).join(', ') : 'Không có';
+
+                            htmlNodes += `<tr class="row-graphic" data-gidx="${gIndex}" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#collapse-${gIndex}"><td>${n.IDN}</td><td>${n.Name}</td><td>${n.Category}</td></tr>`;
+                            // THÊM data-bs-parent="#tbody-nodes" ĐỂ TẠO HIỆU ỨNG ẨN NODE CŨ
+                            htmlNodes += `<tr><td colspan="3" class="p-0 border-0"><div class="collapse" id="collapse-${gIndex}" data-bs-parent="#tbody-nodes"><div class="card card-body p-2 m-1 bg-light text-start" style="font-size:0.8rem">
+                                <div class="mb-1 text-primary"><strong>📍 Điểm gốc (Point):</strong> IDP: ${n.IDP || 'N/A'} | Tên: ${n.PointName || '(trống)'}</div>
+                                <div class="text-success"><strong>🔗 Cung kết nối (Arcs):</strong> ${arcsStr}</div>
+                            </div></div></td></tr>`;
+                            
+                            newGraphics.push(createGraphic({
+                                type: 'point', longitude: n.longitude, latitude: n.latitude,
+                                Name: n.Name, Location: 'Loại: ' + n.Category,
+                                gidx: gIndex
+                            }));
+                            gIndex++;
+                        });
+                    }
+                    
+                    if (jsondata.arcs) {
+                        jsondata.arcs.forEach(function(a){
+                            countArcs++;
+                            let fromName = nodeNameMap[a.FromNode] || `Node ${a.FromNode}`;
+                            let toName = nodeNameMap[a.ToNode] || `Node ${a.ToNode}`;
+                            let leftName = a.PolyLeft ? (polyNameMap[a.PolyLeft] || `Poly ${a.PolyLeft}`) : 'P0 (Ngoại)';
+                            let rightName = a.PolyRight ? (polyNameMap[a.PolyRight] || `Poly ${a.PolyRight}`) : 'P0 (Ngoại)';
+
+                            htmlArcs += `<tr class="row-graphic" data-gidx="${gIndex}" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#collapse-${gIndex}"><td>${a.IDA}</td><td>${a.Name}</td><td>L:${leftName} / R:${rightName}</td></tr>`;
+                            htmlArcs += `<tr><td colspan="3" class="p-0 border-0"><div class="collapse" id="collapse-${gIndex}" data-bs-parent="#tbody-arcs"><div class="card card-body p-2 m-1 bg-light text-start" style="font-size:0.8rem">
+                                <div class="mb-1 text-primary"><strong>📍 Node đầu:</strong> ${fromName} | <strong>Node cuối:</strong> ${toName}</div>
+                                <div class="mb-1 text-success"><strong>⬅️ Đa giác trái:</strong> ${leftName} | <strong>➡️ Đa giác phải:</strong> ${rightName}</div>
+                                <div class="text-secondary"><strong>🔗 Điểm trung gian:</strong> ${a.paths && a.paths[0] ? (a.paths[0].length > 2 ? a.paths[0].length - 2 : 0) : 0} điểm</div>
+                            </div></div></td></tr>`;
+                            
+                            let arcCoordStr = '';
+                            if (a.paths && a.paths.length > 0) {
+                                arcCoordStr = '<br>Tọa độ: ' + JSON.stringify(a.paths[0].map(pt => [parseFloat(pt[0].toFixed(6)), parseFloat(pt[1].toFixed(6))]));
+                            }
+                            newGraphics.push(createGraphic({
+                                type: 'polyline', paths: a.paths,
+                                Name: a.Name, Location: 'Loại: ' + a.Type + ' | Trái: ' + leftName + ' | Phải: ' + rightName + arcCoordStr,
+                                gidx: gIndex
+                            }));
+                            gIndex++;
+                        });
+                    }
+                    
+                    if (jsondata.polygons) {
+                        jsondata.polygons.forEach(function(po){
+                            countPolys++;
+                            const boundingArcs = jsondata.arcs ? jsondata.arcs.filter(a => a.PolyLeft === po.IDPO || a.PolyRight === po.IDPO) : [];
+                            const boundingArcsStr = boundingArcs.length > 0 ? boundingArcs.map(a => a.Name || `Arc_${a.IDA}`).join(', ') : 'Không có';
+                            
+                            htmlPolys += `<tr class="row-graphic" data-gidx="${gIndex}" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#collapse-${gIndex}"><td>${po.IDPO}</td><td>${po.Name}</td></tr>`;
+                            htmlPolys += `<tr><td colspan="2" class="p-0 border-0"><div class="collapse" id="collapse-${gIndex}" data-bs-parent="#tbody-polys"><div class="card card-body p-2 m-1 bg-light text-start" style="font-size:0.8rem">
+                                <div class="mb-1 text-primary"><strong>📍 Mô tả:</strong> ${po.Name || 'N/A'}</div>
+                                <div class="text-success"><strong>🔗 Cung bao quanh (Arcs):</strong> ${boundingArcsStr}</div>
+                            </div></div></td></tr>`;
+                            
+                            // let polyCoordStr = '';
+                            // if (po.rings && po.rings.length > 0) {
+                            //     polyCoordStr = '<br>Tọa độ: ' + JSON.stringify(po.rings[0].map(pt => [parseFloat(pt[0].toFixed(6)), parseFloat(pt[1].toFixed(6))]));
+                            // }
+                            newGraphics.push(createGraphic({
+                                type: 'polygon', rings: po.rings,
+                                Name: po.Name, Location: (po.Location || 'N/A'), // + polyCoordStr,
+                                gidx: gIndex
+                            }));
+                            gIndex++;
+                        });
+                    }
+
+                    if (jsondata.regions) {
+                        jsondata.regions.forEach(function(rg){
+                            countRegions++;
+                            const rId = rg.IDR || rg.ID || rg.id || countRegions;
+                            const rName = rg.DESCRIPTION || rg.Description || rg.Name || rg.name || `Vùng ${rId}`;
+                            
+                            const childPolys = jsondata.polygons ? jsondata.polygons.filter(po => po.IDR === rId) : [];
+                            const childPolysStr = childPolys.length > 0 ? childPolys.map(po => po.Name || `Poly_${po.IDPO}`).join(', ') : 'Không có';
+                            
+                            htmlRegions += `<tr class="row-graphic" data-gidx="${gIndex}" style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#collapse-${gIndex}"><td>${rId}</td><td>${rName}</td></tr>`;
+                            htmlRegions += `<tr><td colspan="2" class="p-0 border-0"><div class="collapse" id="collapse-${gIndex}" data-bs-parent="#tbody-regions"><div class="card card-body p-2 m-1 bg-light text-start" style="font-size:0.8rem">
+                                <div class="text-primary"><strong>🟦 Đa giác thành phần:</strong> ${childPolysStr}</div>
+                            </div></div></td></tr>`;
+                            
+                            if (rg.rings) {
+                                newGraphics.push(createGraphic({
+                                    type: 'polygon', rings: rg.rings,
+                                    isRegion: true,
+                                    Name: rName, 
+                                    Location: 'Mã vùng: ' + rId,
+                                    gidx: gIndex
+                                }));
+                            } else {
+                                let aggregatedRings = null;
+                                if (childPolys.length > 0) {
+                                    aggregatedRings = [];
+                                    childPolys.forEach(po => {
+                                        if (po.rings) {
+                                            aggregatedRings.push(...po.rings);
+                                        }
+                                    });
+                                }
+                                newGraphics.push({ attributes: { Name: rName, gidx: gIndex }, isNullGeom: true, aggregatedRings: aggregatedRings });
+                            }
+                            gIndex++;
+                        });
+                    }
+                    
+                    const graphicsToDraw = newGraphics.filter(g => !g.isNullGeom);
+                    
+                    graphicsLayer.removeAll();
+                    graphicsLayer.addMany(graphicsToDraw);
+                    
+                    if (isFirstLoad && graphicsToDraw.length > 0) {
+                        zoomToGraphics(graphicsToDraw);
+                        isFirstLoad = false;
+                    }
+
+                    document.getElementById('count-pts').innerText = countPts;
+                    document.getElementById('tbody-pts').innerHTML = htmlPts;
+                    
+                    document.getElementById('count-nodes').innerText = countNodes;
+                    document.getElementById('tbody-nodes').innerHTML = htmlNodes;
+                    
+                    document.getElementById('count-arcs').innerText = countArcs;
+                    document.getElementById('tbody-arcs').innerHTML = htmlArcs;
+                    
+                    document.getElementById('count-polys').innerText = countPolys;
+                    document.getElementById('tbody-polys').innerHTML = htmlPolys;
+
+                    document.getElementById('count-regions').innerText = countRegions;
+                    document.getElementById('tbody-regions').innerHTML = htmlRegions;
+
+                    document.querySelectorAll('.row-graphic').forEach(row => {
+                        row.addEventListener('click', function() {
+                            const idx = parseInt(this.getAttribute('data-gidx'));
+                            const g = newGraphics[idx];
+                            
+                            if (g) {
+                                if (g.isNullGeom || !g.geometry) {
+                                    if (g.aggregatedRings && g.aggregatedRings.length > 0) {
+                                        const tempG = createGraphic({ type: 'polygon', rings: g.aggregatedRings });
+                                        view.goTo(tempG);
+                                    }
+                                    return;
+                                }
+                                
+                                view.goTo(g);
+                                view.popup.open({
+                                    features: [g],
+                                    location: g.geometry.type === 'point' ? g.geometry : g.geometry.extent.center
+                                });
+                            }
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Lỗi khi lấy dữ liệu từ API Topo:', error);
+                });
+        }
+
+        loadData();
+        setInterval(loadData, 5000);
+
+    });
+  </script>
+</head>
+<body>
+  <div class="d-flex h-100 w-100">
+    <!-- Sidebar -->
+    <div class="sidebar d-flex flex-column" style="width: 370px; min-width: 370px;">
+        <div class="p-3 bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="m-0">LAB1 - TOPO - 25410333</h5>
+            <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#adminLoginModal">Admin</button>
+        </div>
+        
+        <ul class="nav nav-tabs px-1 pt-2" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pts-tab" data-bs-toggle="tab" data-bs-target="#pts" type="button">Point (<span id="count-pts">0</span>)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="nodes-tab" data-bs-toggle="tab" data-bs-target="#nodes" type="button">Node (<span id="count-nodes">0</span>)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="arcs-tab" data-bs-toggle="tab" data-bs-target="#arcs" type="button">Arc (<span id="count-arcs">0</span>)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="polys-tab" data-bs-toggle="tab" data-bs-target="#polys" type="button">Poly (<span id="count-polys">0</span>)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="regions-tab" data-bs-toggle="tab" data-bs-target="#regions" type="button">Regions (<span id="count-regions">0</span>)</button>
+            </li>
+        </ul>
+        
+        <div class="tab-content flex-grow-1 overflow-auto p-2" id="myTabContent">
+            <!-- Điểm cô lập -->
+            <div class="tab-pane fade show active" id="pts" role="tabpanel">
+                <table class="table table-sm table-hover table-bordered text-center align-middle">
+                    <thead class="table-light"><tr><th style="width:50px">ID</th><th>Tên điểm</th></tr></thead>
+                    <tbody id="tbody-pts"></tbody>
+                </table>
+            </div>
+            
+            <!-- Nodes -->
+            <div class="tab-pane fade" id="nodes" role="tabpanel">
+                <table class="table table-sm table-hover table-bordered text-center align-middle">
+                    <thead class="table-light"><tr><th style="width:50px">ID</th><th>Tên Node</th><th>Phân loại</th></tr></thead>
+                    <!-- ID "tbody-nodes" đóng vai trò là parent group để các Node chỉ mở 1 dòng -->
+                    <tbody id="tbody-nodes"></tbody>
+                </table>
+            </div>
+            
+            <!-- Arcs -->
+            <div class="tab-pane fade" id="arcs" role="tabpanel">
+                <table class="table table-sm table-hover table-bordered text-center align-middle">
+                    <thead class="table-light"><tr><th style="width:50px">ID</th><th>Tên Arc</th><th>L / R</th></tr></thead>
+                    <tbody id="tbody-arcs"></tbody>
+                </table>
+            </div>
+            
+            <!-- Polygons -->
+            <div class="tab-pane fade" id="polys" role="tabpanel">
+                <table class="table table-sm table-hover table-bordered text-center align-middle">
+                    <thead class="table-light"><tr><th style="width:50px">ID</th><th>Tên Đa giác</th></tr></thead>
+                    <tbody id="tbody-polys"></tbody>
+                </table>
+            </div>
+
+            <!-- Regions -->
+            <div class="tab-pane fade" id="regions" role="tabpanel">
+                <table class="table table-sm table-hover table-bordered text-center align-middle">
+                    <thead class="table-light"><tr><th style="width:50px">ID</th><th>Tên Vùng</th></tr></thead>
+                    <tbody id="tbody-regions"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Map -->
+    <div class="flex-grow-1 position-relative">
+        <div id="viewDiv"></div>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div class="modal fade" id="adminLoginModal" tabindex="-1" aria-labelledby="adminLoginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="adminLoginModalLabel">Đăng nhập Admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="adminLoginForm">
+            <div class="mb-3">
+              <label for="adminUsername" class="form-label">Tài khoản</label>
+              <input type="text" class="form-control" id="adminUsername" required>
+            </div>
+            <div class="mb-3">
+              <label for="adminPassword" class="form-label">Mật khẩu</label>
+              <input type="password" class="form-control" id="adminPassword" required>
+            </div>
+            <div id="adminLoginError" class="text-danger small mb-2" style="display:none;"></div>
+            <button type="submit" class="btn btn-primary w-100">Đăng nhập</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const u = document.getElementById('adminUsername').value;
+        const p = document.getElementById('adminPassword').value;
+        fetch('http://localhost:3001/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: u, password: p })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                sessionStorage.setItem('adminToken', data.token);
+                sessionStorage.setItem('adminLoginTimestamp', Date.now().toString());
+                window.location.href = '/admin/index.html';
+            } else {
+                const errDiv = document.getElementById('adminLoginError');
+                errDiv.innerText = data.message || 'Sai thông tin';
+                errDiv.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Lỗi kết nối máy chủ');
+        });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+const fs = require('fs');
+const content = '\n## KHẮC PHỤC LỖI KHÔNG TẢI ĐƯỢC MAPVIEW VÀ DỮ LIỆU BAN ĐẦU\n- Đã sửa lỗi `MapView` bằng cách bọc hàm tải dữ liệu (`window.loadData()`) bên trong sự kiện `view.when(...)` để đảm bảo MapView đã khởi tạo xong hoàn toàn trước khi nạp đồ họa (Graphic) lên bản đồ. Điều này khắc phục tình trạng bản đồ hiển thị trắng xóa.\n- Toàn bộ các đối tượng hình học (Point, Polyline, Polygon) nạp từ DB (chuẩn WGS84 - wkid: 4326) đều đã được khai báo tường minh `spatialReference: { wkid: 4326 }` ở API Handler và DetectPoly. ArcGIS sẽ tự động xử lý phép chiếu (re-project) sang Web Mercator (wkid: 3857) của basemap.\n- Đã kiểm tra không còn trộn lẫn ES Modules trong file liên quan đến Spatial Reference.\n';
+fs.appendFileSync('thaoluan.md', content);
+console.log("Đã cập nhật thaoluan.md thành công!");
